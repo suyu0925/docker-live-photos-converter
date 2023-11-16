@@ -12,7 +12,7 @@ The cronjob is running every hours by default, you can change it by setting `CRO
 
 Change the cronjob to run every 3 hours:
 ```shell
-docker run --name live-photos-converter --restart always -d -v "$(pwd)/photos:/photos" -e CRON="0 */3 * * *"  lckof/live-photos-converter
+docker run --name live-photos-converter --restart always -d -v "$(pwd)/photos:/photos" -e CRON="0 */3 * * *" lckof/live-photos-converter
 ```
 
 ## Develope
@@ -39,5 +39,5 @@ docker run --rm --name live-photos-converter -it -v "$(pwd)/photos:/photos" -e C
 ### Publish
 
 ```shell
-docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 -t lckof/live-photos-converter:latest --push .
+docker buildx build --platform linux/amd64 -t lckof/live-photos-converter:latest --push .
 ```
