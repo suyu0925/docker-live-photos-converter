@@ -2,10 +2,13 @@ import datetime
 import os
 import subprocess
 from pathlib import PurePath
+import re
+import shutil
 
 import pyexiv2
 
 PHOTOS_DIR = "/photos"
+EXPORT_DIR = "/exports"
 TEMP_DIR = "/tmp"
 
 
@@ -92,6 +95,53 @@ def convert_live_photo_to_motion_photo(photo_path, video_path):
     add_xmp_metadata(merged_path, offset)
 
 
+def get_last_export_date() -> datetime.date:
+    last_date = None
+    for root, _, _ in os.walk(EXPORT_DIR, topdown=False):
+        match = re.match(r"^/exports/(\d{4})/(\d{2})/(\d{2})", root)
+        if match:
+            current_date = datetime.date(int(match.group(1)), int(
+                match.group(2)), int(match.group(3)))
+            if last_date is None or last_date < current_date:
+                last_date = current_date
+    return last_date
+
+
+def is_live_photo(file, files):
+    if file.endswith("_HEVC.MOV"):
+        return True
+    if file.endswith(".HEIC"):
+        video_file = file.removesuffix(".HEIC") + "_HEVC.MOV"
+        return video_file in files
+    return False
+
+
+def sync_to_exports():
+    if not os.path.exists(EXPORT_DIR):
+        print("export directory does not exist")
+        return
+
+    last_date = get_last_export_date()
+    print("last synced date in exports:", last_date)
+
+    for root, _, files in os.walk(PHOTOS_DIR, topdown=False):
+        match = re.match(r"^/photos/(\d{4})/(\d{2})/(\d{2})", root)
+        if match:
+            current_date = datetime.date(int(match.group(1)), int(
+                match.group(2)), int(match.group(3)))
+            if last_date is None or last_date <= current_date:
+                for file in files:
+                    # ignore live photo files, since we have motion photos version
+                    if is_live_photo(file, files):
+                        continue
+                    export_root = os.path.join(EXPORT_DIR, os.path.relpath(root, PHOTOS_DIR))
+                    os.makedirs(export_root, exist_ok=True)
+                    if not os.path.exists(os.path.join(export_root, file)):
+                        # ignore existing files
+                        print("copy", os.path.join(root, file), "to", os.path.join(export_root, file))
+                        shutil.copyfile(os.path.join(root, file), os.path.join(export_root, file))
+
+
 def main():
     check_env()
 
@@ -99,6 +149,8 @@ def main():
 
     for photo_path, video_path in iterate_live_photos(PHOTOS_DIR):
         convert_live_photo_to_motion_photo(photo_path, video_path)
+
+    sync_to_exports()
 
 
 if __name__ == '__main__':

@@ -1,4 +1,4 @@
-CRON=${CRON:-"0 * * * *"}
+CRON=${CRON:-"0 3 * * *"}
 
 touch /root/cron.out
 
